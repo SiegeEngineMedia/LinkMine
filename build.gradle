@@ -1,0 +1,38 @@
+plugins {
+    id 'org.springframework.boot' version '2.7.1'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+}
+
+group = 'com.sem'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator:2.7.0'
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb:2.7.0'
+    implementation 'org.springframework.boot:spring-boot-starter-web:2.7.0'
+    implementation 'com.slack.api:bolt:1.24.0'
+    implementation 'com.slack.api:bolt-servlet:1.24.0'
+    // implementation 'org.slf4j:slf4j-simple:1.7.36'
+    // implementation 'com.google.inject:guice:5.1.0'
+    implementation 'javax.inject:javax.inject:1'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:2.7.0'
+}
+
+// application {
+//     mainClassName = "hello.LinkMineApplication"
+// }
+//
+// run {
+//     systemProperty "org.slf4j.simpleLogger.log.com.slack.api", System.getProperty("slackLogLevel")
+// }
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
