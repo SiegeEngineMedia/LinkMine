@@ -10,6 +10,18 @@ public class LinkModel {
      */
     private String userId;
 
+    public LinkModel(
+            String type,
+            String userId,
+            String link,
+            String[] tags
+    ) {
+        this.type = type;
+        this.userId = userId;
+        this.link = link;
+        this.tags = tags;
+    }
+
     public String getType() {
         return type;
     }
