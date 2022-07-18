@@ -3,7 +3,6 @@ package com.sem.linkmine.services;
 import com.sem.linkmine.errors.AuthenticationException;
 import com.sem.linkmine.models.LinkModel;
 import com.sem.linkmine.models.LinkResource;
-import com.sem.linkmine.models.Resource;
 import com.sem.linkmine.services.commands.CommandMineAdd;
 import com.sem.linkmine.services.commands.CommandMineQuery;
 import com.slack.api.app_backend.interactive_components.response.ActionResponse;
@@ -21,17 +20,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+
+import java.io.IOException;
 
 import static com.slack.api.model.block.Blocks.*;
-import static com.slack.api.model.block.composition.BlockCompositions.*;
-import static com.slack.api.model.block.element.BlockElements.*;
-
-import javax.inject.Inject;
-import java.io.IOException;
-import java.util.List;
+import static com.slack.api.model.block.composition.BlockCompositions.plainText;
+import static com.slack.api.model.block.element.BlockElements.asElements;
+import static com.slack.api.model.block.element.BlockElements.button;
 
 @Configuration
 public class SlackService {

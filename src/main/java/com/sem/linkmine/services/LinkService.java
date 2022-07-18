@@ -3,47 +3,25 @@ package com.sem.linkmine.services;
 import com.sem.linkmine.errors.AuthenticationException;
 import com.sem.linkmine.models.LinkResource;
 import com.sem.linkmine.repositories.LinkRepository;
-import com.sem.linkmine.services.commands.CommandMineQuery;
-import com.slack.api.app_backend.interactive_components.response.ActionResponse;
-import com.slack.api.bolt.App;
-import com.slack.api.bolt.context.builtin.SlashCommandContext;
-import com.slack.api.bolt.request.builtin.SlashCommandRequest;
-import com.slack.api.bolt.response.Response;
-import com.slack.api.methods.SlackApiException;
-import com.slack.api.model.ModelConfigurator;
-import com.slack.api.model.block.ImageBlock;
 import org.bson.types.ObjectId;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationExpression;
 import org.springframework.data.mongodb.core.aggregation.MatchOperation;
 import org.springframework.data.mongodb.core.aggregation.SampleOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.CriteriaDefinition;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.util.List;
-
-import static com.slack.api.model.block.Blocks.*;
-import static com.slack.api.model.block.composition.BlockCompositions.plainText;
-import static com.slack.api.model.block.element.BlockElements.asElements;
-import static com.slack.api.model.block.element.BlockElements.button;
 
 @Service
 public class LinkService {
-    private final MongoTemplate mongoTemplate;
+    @Inject
+    private final MongoTemplate mongoTemplate = null;
     private final LinkRepository linkRepository;
     private final ConfigService config;
 
-    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConfigService config) {
-        this.mongoTemplate = mongoTemplate;
+    public LinkService(LinkRepository linkRepository, ConfigService config) {
         this.linkRepository = linkRepository;
         this.config = config;
     }
