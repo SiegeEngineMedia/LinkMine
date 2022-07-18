@@ -31,6 +31,10 @@ jar {
                 'Main-Class': 'com.sem.linkmine.LinkMineApplication'
         )
     }
+    duplicatesStrategy "exclude"
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 tasks.named('test') {
