@@ -7,7 +7,6 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @SpringBootApplication
 @ServletComponentScan
-@EnableMongoRepositories
 public class LinkMineApplication {
     public static void main(String[] args) {
         SpringApplication.run(LinkMineApplication.class, args);

@@ -11,17 +11,16 @@ import org.springframework.data.mongodb.core.aggregation.SampleOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
-import javax.inject.Inject;
 import java.util.List;
 
 @Service
 public class LinkService {
-    @Inject
-    private final MongoTemplate mongoTemplate = null;
+    private final MongoTemplate mongoTemplate;
     private final LinkRepository linkRepository;
     private final ConfigService config;
 
-    public LinkService(LinkRepository linkRepository, ConfigService config) {
+    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConfigService config) {
+        this.mongoTemplate = mongoTemplate;
         this.linkRepository = linkRepository;
         this.config = config;
     }
