@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ConstantsService {
-    // FIXME: heroku does not like @Value annotations
-    public final String MONGO_URI = System.getenv("MONGODB_URI");
+    @Value("${spring.data.mongodb.uri}")
+    public final String MONGO_URI = null;
 
     @Value("${spring.data.mongodb.database}")
     public final String MONGO_DB_NAME = "link-mine";
