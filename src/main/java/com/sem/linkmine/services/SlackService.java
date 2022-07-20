@@ -70,24 +70,32 @@ public class SlackService {
 
     public Response handleMineAdd(SlashCommandRequest req, SlashCommandContext ctx) {
         var command = new CommandMineAdd(req, consts);
-        var resource = new LinkResource(new LinkModel(
+        var attrs = new LinkModel(
                 command.getType(),
                 req.getPayload().getUserId(),
                 command.getLink(),
                 command.getTags()
-        ));
+        );
 
         try {
-            linkService.upsert(resource);
+            linkService.insert(attrs);
             return ctx.ack(":pick: Link updated.");
         } catch (AuthenticationException e) {
-            // TODO: handle me better
             return ctx.ack(":pick: That link has been entered by someone else, you aren't able to update it.");
         }
     }
 
     public Response handleMineRem(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
-        return ctx.ack(":pick: Not implemented yet!");
+        var payload = req.getPayload();
+        var link = payload.getText().trim();
+        var userId = payload.getUserId();
+
+        try {
+            linkService.deleteByLink(link, userId);
+            return ctx.ack(":pick: Link removed.");
+        } catch (AuthenticationException e) {
+            return ctx.ack(":pick: That link has been entered by someone else, you aren't able to remove it.");
+        }
     }
     //endregion
 

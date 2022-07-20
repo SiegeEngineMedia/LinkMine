@@ -29,4 +29,12 @@ public class Resource<T> {
     public T getAttrs() {
         return attrs;
     }
+
+    public void setId(ObjectId _id) {
+        this._id = _id;
+    }
+
+    public void setAttrs(T attrs) {
+        this.attrs = attrs;
+    }
 }

@@ -12,7 +12,7 @@ public class ConstantsService {
     public final String MONGO_DB_NAME = "link-mine";
 
     @Value("${linkmine.links.db.collection}")
-    public final String COMMAND_MINE_DB_COLLECTION = null;
+    public final String LINKS_COLLECTION_NAME = null;
 
     @Value("${linkmine.commands.mine.command}")
     public final String COMMAND_MINE_QUERY = null;
