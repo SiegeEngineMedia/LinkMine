@@ -71,7 +71,7 @@ public class LinkService {
             criteria = criteria.and("attrs.type").is(type);
         }
         if (tags.length > 0) {
-            criteria = criteria.and("attrs.tags").in(tags);
+            criteria = criteria.and("attrs.tags").in((Object[]) tags);
         }
 
         return criteria;
