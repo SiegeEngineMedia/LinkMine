@@ -1,6 +1,6 @@
 package com.sem.linkmine.services.commands;
 
-import com.sem.linkmine.services.ConfigService;
+import com.sem.linkmine.services.ConstantsService;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 
 import java.util.Arrays;
@@ -11,7 +11,7 @@ public class CommandMineAdd {
     private final String link;
     private final String[] tags;
 
-    public CommandMineAdd(SlashCommandRequest req, ConfigService config) {
+    public CommandMineAdd(SlashCommandRequest req, ConstantsService config) {
         commandText = req.getPayload().getText().trim();
         var segments = commandText.split(" ");
         type = segments[0];

@@ -6,7 +6,6 @@ import com.sem.linkmine.models.LinkResource;
 import com.sem.linkmine.services.commands.CommandMineAdd;
 import com.sem.linkmine.services.commands.CommandMineQuery;
 import com.slack.api.app_backend.interactive_components.response.ActionResponse;
-import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.ActionContext;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.BlockActionRequest;
@@ -18,7 +17,6 @@ import com.slack.api.model.block.ImageBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 
@@ -33,34 +31,19 @@ import static com.slack.api.model.block.element.BlockElements.button;
 @Configuration
 public class SlackService {
     private final LinkService linkService;
-    private final ConfigService config;
+    private final ConstantsService consts;
 
     private final JSONParser parser;
 
-    public SlackService(LinkService linkService, ConfigService config) {
+    public SlackService(LinkService linkService, ConstantsService consts) {
         this.linkService = linkService;
-        this.config = config;
+        this.consts = consts;
         this.parser = new JSONParser();
     }
 
-    @Bean
-    public App initSlackApp() {
-        var app = new App();
-
-        app.blockAction(config.ACTION_MINE_CONFIRM, (req, ctx) -> handleBlockMineConfirm(req, ctx));
-        app.blockAction(config.ACTION_MINE_SHUFFLE, (req, ctx) -> handleBlockShuffle(req, ctx));
-        app.blockAction(config.ACTION_MINE_CANCEL, (req, ctx) -> handleBlockCancel(req, ctx));
-
-        app.command(config.COMMAND_MINE_QUERY, (req, ctx) -> handleMineQuery(req, ctx));
-        app.command(config.COMMAND_MINE_ADD, (req, ctx) -> handleMineAdd(req, ctx));
-        app.command(config.COMMAND_MINE_REM, (req, ctx) -> handleMineRem(req, ctx));
-
-        return app;
-    }
-
     //region Command handlers
-    private Response handleMineQuery(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
-        var command = new CommandMineQuery(req, config);
+    public Response handleMineQuery(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
+        var command = new CommandMineQuery(req, consts);
         var resource = linkService.retrieveOneRandom(command.getType(), command.getTags());
 
         if (resource != null) {
@@ -73,9 +56,9 @@ public class SlackService {
                     image((ModelConfigurator<ImageBlock.ImageBlockBuilder>) image -> image.title(plainText(command.getCommandText())).imageUrl(link).altText(resourceTags)),
                     actions(actions -> actions
                             .elements(asElements(
-                                    button(b -> b.text(plainText("Cancel")).value(commandValue.toString()).actionId("mine-cancel").style("danger")),
-                                    button(b -> b.text(plainText("Shuffle")).value(commandValue.toString()).actionId("mine-shuffle")),
-                                    button(b -> b.text(plainText("Confirm")).value(commandValue.toString()).actionId("mine-confirm").style("primary"))
+                                    button(b -> b.text(plainText("Cancel")).value(commandValue.toString()).actionId(consts.ACTION_MINE_CANCEL).style("danger")),
+                                    button(b -> b.text(plainText("Shuffle")).value(commandValue.toString()).actionId(consts.ACTION_MINE_SHUFFLE)),
+                                    button(b -> b.text(plainText("Confirm")).value(commandValue.toString()).actionId(consts.ACTION_MINE_CONFIRM).style("primary"))
                             ))
                     )
             ));
@@ -85,8 +68,8 @@ public class SlackService {
         return ctx.ack(":pick: No images to speak of! Try adding some.");
     }
 
-    private Response handleMineAdd(SlashCommandRequest req, SlashCommandContext ctx) {
-        var command = new CommandMineAdd(req, config);
+    public Response handleMineAdd(SlashCommandRequest req, SlashCommandContext ctx) {
+        var command = new CommandMineAdd(req, consts);
         var resource = new LinkResource(new LinkModel(
                 command.getType(),
                 req.getPayload().getUserId(),
@@ -103,13 +86,13 @@ public class SlackService {
         }
     }
 
-    private Response handleMineRem(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
+    public Response handleMineRem(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
         return ctx.ack(":pick: Not implemented yet!");
     }
     //endregion
 
     //region Block handlers
-    private Response handleBlockMineConfirm(BlockActionRequest req, ActionContext ctx) throws IOException {
+    public Response handleBlockMineConfirm(BlockActionRequest req, ActionContext ctx) throws IOException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
         try {
@@ -141,7 +124,7 @@ public class SlackService {
         }
     }
 
-    private Response handleBlockShuffle(BlockActionRequest req, ActionContext ctx) throws IOException {
+    public Response handleBlockShuffle(BlockActionRequest req, ActionContext ctx) throws IOException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
         try {
@@ -160,9 +143,9 @@ public class SlackService {
                                 image((ModelConfigurator<ImageBlock.ImageBlockBuilder>) image -> image.title(plainText(updatedActionValue.text)).imageUrl(updatedActionValue.link).altText(resourceTags)),
                                 actions(actions -> actions
                                         .elements(asElements(
-                                                button(b -> b.text(plainText("Cancel")).value(updatedActionValue.toString()).actionId(config.ACTION_MINE_CANCEL).style("danger")),
-                                                button(b -> b.text(plainText("Shuffle")).value(updatedActionValue.toString()).actionId(config.ACTION_MINE_SHUFFLE)),
-                                                button(b -> b.text(plainText("Confirm")).value(updatedActionValue.toString()).actionId(config.ACTION_MINE_CONFIRM).style("primary"))
+                                                button(b -> b.text(plainText("Cancel")).value(updatedActionValue.toString()).actionId(consts.ACTION_MINE_CANCEL).style("danger")),
+                                                button(b -> b.text(plainText("Shuffle")).value(updatedActionValue.toString()).actionId(consts.ACTION_MINE_SHUFFLE)),
+                                                button(b -> b.text(plainText("Confirm")).value(updatedActionValue.toString()).actionId(consts.ACTION_MINE_CONFIRM).style("primary"))
                                         ))
                                 )
                         ))
@@ -181,7 +164,7 @@ public class SlackService {
         }
     }
 
-    private Response handleBlockCancel(BlockActionRequest req, ActionContext ctx) throws IOException {
+    public Response handleBlockCancel(BlockActionRequest req, ActionContext ctx) throws IOException {
         var response = ActionResponse
                 .builder()
                 .deleteOriginal(true)

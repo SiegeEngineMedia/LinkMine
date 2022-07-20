@@ -17,9 +17,9 @@ import java.util.List;
 public class LinkService {
     private final MongoTemplate mongoTemplate;
     private final LinkRepository linkRepository;
-    private final ConfigService config;
+    private final ConstantsService config;
 
-    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConfigService config) {
+    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConstantsService config) {
         this.mongoTemplate = mongoTemplate;
         this.linkRepository = linkRepository;
         this.config = config;
@@ -29,7 +29,8 @@ public class LinkService {
         var existing = linkRepository.findByLink(resource.getAttrs().getLink());
         if (existing != null && existing.getId().equals(resource.getId())) {
             if (existing.getAttrs().getUserId().equals(resource.getAttrs().getUserId())) {
-                return linkRepository.save(resource);
+                var updated = new LinkResource(existing.getId(), resource.getAttrs());
+                return linkRepository.save(updated);
             }
             throw new AuthenticationException();
         }

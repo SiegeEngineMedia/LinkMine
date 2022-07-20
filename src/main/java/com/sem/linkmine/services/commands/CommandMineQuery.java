@@ -1,6 +1,6 @@
 package com.sem.linkmine.services.commands;
 
-import com.sem.linkmine.services.ConfigService;
+import com.sem.linkmine.services.ConstantsService;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 
 import java.util.Arrays;
@@ -10,7 +10,7 @@ public class CommandMineQuery {
     private final String type;
     private final String[] tags;
 
-    public CommandMineQuery(SlashCommandRequest req, ConfigService config) {
+    public CommandMineQuery(SlashCommandRequest req, ConstantsService config) {
         commandText = req.getPayload().getText().trim();
         var tags = commandText.split(" ");
         if (tags.length > 0 && tags[0].startsWith(config.MINE_TYPE_PREFIX)) {
