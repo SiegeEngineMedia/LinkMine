@@ -7,5 +7,4 @@ FROM amazoncorretto:18-alpine-jdk
 RUN mkdir /app
 COPY --from=build /home/gradle/src/build/libs/*-SNAPSHOT.jar /app/app.jar
 
-# CMD ["sh", "-c", "java", "-Dserver.port=$PORT", "$JAVA_OPTS", "-jar", "/app/app.jar"]
 CMD java -Dserver.port=$PORT $JAVA_OPTS -jar /app/app.jar
