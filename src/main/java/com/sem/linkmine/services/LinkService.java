@@ -6,15 +6,15 @@ import com.sem.linkmine.models.LinkResource;
 import com.sem.linkmine.repositories.LinkRepository;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.MatchOperation;
-import org.springframework.data.mongodb.core.aggregation.SampleOperation;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LinkService {
@@ -34,6 +34,15 @@ public class LinkService {
 
     public LinkResource update(ObjectId id, LinkModel attrs) throws AuthenticationException {
         return tryUpsert(id, attrs);
+    }
+
+    public List<CountObject> getCounts() {
+//        Aggregation aggregation = Aggregation.newAggregation(
+//                Aggregation.unwind("$attrs.tags"),
+//                Aggregation.group("$attrs.tags").sum("count")
+//        );
+//        return mongoTemplate.aggregate(aggregation, CountObject.class);
+        return new ArrayList<CountObject>();
     }
 
     public void deleteById(ObjectId id, String userId) throws AuthenticationException {
@@ -60,6 +69,10 @@ public class LinkService {
             return;
         }
         throw new AuthenticationException();
+    }
+
+    public Optional<LinkResource> findById(ObjectId id) {
+        return linkRepository.findById(id);
     }
 
     public List<LinkResource> retrieveRandom(String type, String[] tags, int count) {
@@ -104,4 +117,10 @@ public class LinkService {
 
         return criteria;
     }
+}
+
+// TODO: fix me somewhere better
+class CountObject {
+    public String _id;
+    public Integer count;
 }

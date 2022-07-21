@@ -20,10 +20,13 @@ public class ConstantsService {
     public final String COMMAND_MINE_ADD = null;
     @Value("${linkmine.commands.mine.command.rem}")
     public final String COMMAND_MINE_REM = null;
+    @Value("${linkmine.commands.mine.command.sum}")
+    public final String COMMAND_MINE_SUM = null;
     @Value("${linkmine.commands.mine.type.prefix}")
     public final String MINE_TYPE_PREFIX = null;
 
     public final String ACTION_MINE_CONFIRM = "mine-confirm";
+    public final String ACTION_MINE_BACK = "mine-back";
     public final String ACTION_MINE_SHUFFLE = "mine-shuffle";
     public final String ACTION_MINE_CANCEL = "mine-cancel";
 }
