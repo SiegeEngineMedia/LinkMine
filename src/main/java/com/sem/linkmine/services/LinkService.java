@@ -93,7 +93,7 @@ public class LinkService {
 
     private LinkResource tryUpsert(ObjectId id, LinkModel attrs) throws AuthenticationException {
         var existingOption = linkRepository.findByLink(attrs.getLink());
-        if (existingOption.map(e -> e.getId().equals(id)).orElse(false)) {
+        if (existingOption.isPresent()) {
             var existing = existingOption.get();
             if (existing.getAttrs().getUserId().equals(attrs.getUserId())) {
                 var existingQuery = Query.query(Criteria.where("_id").is(existing.getId()));

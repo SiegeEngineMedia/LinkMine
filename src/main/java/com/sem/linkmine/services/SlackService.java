@@ -15,7 +15,6 @@ import com.slack.api.bolt.request.builtin.BlockActionRequest;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
 import com.slack.api.methods.SlackApiException;
-import com.slack.api.methods.request.chat.ChatPostMessageRequest;
 import com.slack.api.model.ModelConfigurator;
 import com.slack.api.model.block.ContextBlockElement;
 import com.slack.api.model.block.ImageBlock;
@@ -27,7 +26,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.slack.api.model.block.Blocks.*;
@@ -90,7 +88,7 @@ public class SlackService {
                 return ctx.ack();
             }
         }
-        return ctx.ack(":pick: No images to speak of! Try adding some.");
+        return ctx.ack(":pick: No links to speak of! Try adding some.");
     }
 
     public Response handleMineAdd(SlashCommandRequest req, SlashCommandContext ctx) {
@@ -187,10 +185,9 @@ public class SlackService {
             System.out.println(e);
             throw e;
         }
-
     }
 
-    public Response handleBlockBack(BlockActionRequest req, ActionContext ctx) throws IOException {
+    public Response handleBlockMineBack(BlockActionRequest req, ActionContext ctx) throws IOException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
         var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
@@ -201,26 +198,35 @@ public class SlackService {
 
         if (resourceOption.isPresent()) {
             var resource = resourceOption.get();
+            var response = buildBlockShuffleResponse(actionValue, resource);
             var attrs = resource.getAttrs();
-            actionValue.setType(attrs.getType());
-            actionValue.setLink(attrs.getLink());
-
-            var actionElements = buildMineActionElements(actionValue);
-            var response = ActionResponse
-                    .builder()
-                    .replaceOriginal(true)
-                    .blocks(asBlocks(
-                            buildMineActionOutput(actionValue),
-                            actions(actions -> actions.elements(actionElements))
-                    ))
-                    .text(actionValue.getCommand().getText())
-                    .build();
 
             ctx.respond(response);
 
             return ctx.ack();
         }
-        ctx.respond(":pick: No images to speak of! Try adding some.");
+        ctx.respond(":pick: No links to speak of! Try adding some.");
+        return ctx.ack();
+    }
+
+    public Response handleBlockMineFirst(BlockActionRequest req, ActionContext ctx) throws IOException {
+        var payload = req.getPayload();
+        var action = payload.getActions().get(0);
+        var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
+
+        actionValue.dropIdsKeepFirst();
+        var id = actionValue.getLastId();
+        var resourceOption = linkService.findById(new ObjectId(id));
+
+        if (resourceOption.isPresent()) {
+            var resource = resourceOption.get();
+            var response = buildBlockShuffleResponse(actionValue, resource);
+
+            ctx.respond(response);
+
+            return ctx.ack();
+        }
+        ctx.respond(":pick: No links to speak of! Try adding some.");
         return ctx.ack();
     }
 
@@ -253,7 +259,7 @@ public class SlackService {
 
             return ctx.ack();
         }
-        ctx.respond(":pick: No images to speak of! Try adding some.");
+        ctx.respond(":pick: No links to speak of! Try adding some.");
         return ctx.ack();
     }
 
@@ -262,6 +268,25 @@ public class SlackService {
         return ctx.ack();
     }
     //endregion
+
+    private ActionResponse buildBlockShuffleResponse(LinkResourceBlockAction actionValue, LinkResource resource) throws JsonProcessingException {
+        var attrs = resource.getAttrs();
+        actionValue.setType(attrs.getType());
+        actionValue.setLink(attrs.getLink());
+
+        var actionElements = buildMineActionElements(actionValue);
+        var response = ActionResponse
+                .builder()
+                .replaceOriginal(true)
+                .blocks(asBlocks(
+                        buildMineActionOutput(actionValue),
+                        actions(actions -> actions.elements(actionElements))
+                ))
+                .text(actionValue.getCommand().getText())
+                .build();
+
+        return response;
+    }
 
     private LayoutBlock buildMineActionOutput(LinkResourceBlockAction actionValue) {
         var command = actionValue.getCommand();
@@ -293,6 +318,9 @@ public class SlackService {
 
         if (actionValue.getIds().length > 1) {
             actionElements.add(button(b -> b.text(plainText("Back")).value(actionPayload).actionId(constants.ACTION_MINE_BACK)));
+        }
+        if (actionValue.getIds().length > 2) {
+            actionElements.add(button(b -> b.text(plainText("First")).value(actionPayload).actionId(constants.ACTION_MINE_FIRST)));
         }
 
         return actionElements;

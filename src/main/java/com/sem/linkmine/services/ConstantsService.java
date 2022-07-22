@@ -26,7 +26,8 @@ public class ConstantsService {
     public final String MINE_TYPE_PREFIX = null;
 
     public final String ACTION_MINE_CONFIRM = "mine-confirm";
-    public final String ACTION_MINE_BACK = "mine-back";
     public final String ACTION_MINE_SHUFFLE = "mine-shuffle";
     public final String ACTION_MINE_CANCEL = "mine-cancel";
+    public final String ACTION_MINE_BACK = "mine-back";
+    public final String ACTION_MINE_FIRST = "mine-first";
 }

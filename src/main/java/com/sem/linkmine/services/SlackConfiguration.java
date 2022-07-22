@@ -21,9 +21,10 @@ public class SlackConfiguration {
         var app = new App();
 
         app.blockAction(config.ACTION_MINE_CONFIRM, (req, ctx) -> slackService.handleBlockMineConfirm(req, ctx));
-        app.blockAction(config.ACTION_MINE_BACK, (req, ctx) -> slackService.handleBlockBack(req, ctx));
         app.blockAction(config.ACTION_MINE_SHUFFLE, (req, ctx) -> slackService.handleBlockShuffle(req, ctx));
         app.blockAction(config.ACTION_MINE_CANCEL, (req, ctx) -> slackService.handleBlockCancel(req, ctx));
+        app.blockAction(config.ACTION_MINE_BACK, (req, ctx) -> slackService.handleBlockMineBack(req, ctx));
+        app.blockAction(config.ACTION_MINE_FIRST, (req, ctx) -> slackService.handleBlockMineFirst(req, ctx));
 
         app.command(config.COMMAND_MINE_QUERY, (req, ctx) -> slackService.handleMineQuery(req, ctx));
         app.command(config.COMMAND_MINE_ADD, (req, ctx) -> slackService.handleMineAdd(req, ctx));

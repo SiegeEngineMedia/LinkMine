@@ -57,6 +57,12 @@ public class LinkResourceBlockAction {
         return id;
     }
 
+    public String dropIdsKeepFirst() {
+        var id = ids[0];
+        ids = Arrays.copyOfRange(ids, 0, 1);
+        return id;
+    }
+
     public void setIds(String[] ids) {
         this.ids = ids;
     }
