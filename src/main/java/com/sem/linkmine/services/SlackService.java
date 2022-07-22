@@ -1,10 +1,13 @@
 package com.sem.linkmine.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sem.linkmine.errors.AuthenticationException;
 import com.sem.linkmine.models.LinkModel;
 import com.sem.linkmine.models.LinkResource;
 import com.sem.linkmine.services.commands.CommandMineAdd;
 import com.sem.linkmine.services.commands.CommandMineQuery;
+import com.sem.linkmine.services.commands.LinkResourceBlockAction;
 import com.slack.api.app_backend.interactive_components.response.ActionResponse;
 import com.slack.api.bolt.context.builtin.ActionContext;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
@@ -19,9 +22,6 @@ import com.slack.api.model.block.ImageBlock;
 import com.slack.api.model.block.LayoutBlock;
 import com.slack.api.model.block.element.BlockElement;
 import org.bson.types.ObjectId;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 
@@ -31,44 +31,70 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.slack.api.model.block.Blocks.*;
+import static com.slack.api.model.block.composition.BlockCompositions.markdownText;
 import static com.slack.api.model.block.composition.BlockCompositions.plainText;
-import static com.slack.api.model.block.element.BlockElements.asElements;
-import static com.slack.api.model.block.element.BlockElements.button;
+import static com.slack.api.model.block.element.BlockElements.*;
 
 @Service
 @Configuration
 public class SlackService {
     private final LinkService linkService;
-    private final ConstantsService consts;
+    private final ConstantsService constants;
 
-    private final JSONParser parser;
+    private final ObjectMapper mapper;
 
-    public SlackService(LinkService linkService, ConstantsService consts) {
+    private final ActionResponse REMOVE_MESSAGE_RESPONSE = ActionResponse
+            .builder()
+            .deleteOriginal(true)
+            .replaceOriginal(true)
+            .text("")
+            .build();
+
+    public SlackService(LinkService linkService, ConstantsService constants) {
         this.linkService = linkService;
-        this.consts = consts;
-        this.parser = new JSONParser();
+        this.constants = constants;
+        this.mapper = new ObjectMapper();
     }
 
     //region Command handlers
-    public Response handleMineQuery(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
-        var command = new CommandMineQuery(req, consts);
+    public Response handleMineQuery(SlashCommandRequest req, SlashCommandContext ctx) throws IOException {
+        var payload = req.getPayload();
+        var command = new CommandMineQuery(req, constants);
         var resource = linkService.retrieveOneRandom(command.getType(), command.getTags());
 
         if (resource != null) {
-            var actionValue = new LinkResourceBlockActionJSON(command.getCommandText(), command.getType(), command.getTags(), resource);
+            var actionValue = new LinkResourceBlockAction(command.getCommandText(), command.getType(), command.getTags(), resource);
 
-            ctx.respond(asBlocks(
-                    buildMineActionOutput(actionValue),
-                    actions(actions -> actions.elements(buildMineActionElements(actionValue)))
-            ));
+            try {
+                var actionElements = buildMineActionElements(actionValue);
 
-            return ctx.ack();
+                if (payload.getChannelName().equals("directmessage")) {
+                    ctx.respond(r -> r
+                            .responseType("in_channel")
+                            .blocks(asBlocks(
+                                    buildMineActionOutput(actionValue),
+                                    actions(actions -> actions.elements(actionElements))
+                            ))
+                    );
+                } else {
+                    ctx.respond(r -> r
+                            .blocks(asBlocks(
+                                    buildMineActionOutput(actionValue),
+                                    actions(actions -> actions.elements(actionElements))
+                            ))
+                    );
+                }
+                return ctx.ack();
+            } catch (JsonProcessingException e) {
+                // TODO: handle better;
+                return ctx.ack();
+            }
         }
         return ctx.ack(":pick: No images to speak of! Try adding some.");
     }
 
     public Response handleMineAdd(SlashCommandRequest req, SlashCommandContext ctx) {
-        var command = new CommandMineAdd(req, consts);
+        var command = new CommandMineAdd(req, constants);
         var attrs = new LinkModel(
                 command.getType(),
                 req.getPayload().getUserId(),
@@ -98,8 +124,6 @@ public class SlackService {
     }
 
     public Response handleMineSum(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
-        var payload = req.getPayload();
-
         List<CountObject> counts = linkService.getCounts();
         List<ContextBlockElement> textElements = new ArrayList<ContextBlockElement>();
         int total = 0;
@@ -109,10 +133,12 @@ public class SlackService {
         }
         textElements.add(0, plainText("Total: " + total));
 
-        ctx.client().chatPostMessage(r -> r
-                .channel(ctx.getChannelId())
-                .blocks(asBlocks(context(c -> c.elements(textElements))))
+        ctx.respond(r -> r
                 .text("Count for each tag:")
+                .blocks(asBlocks(
+                        section(s -> s.text(markdownText("Count for each tag:"))),
+                        context(c -> c.elements(textElements))
+                ))
         );
 
         return ctx.ack();
@@ -123,188 +149,152 @@ public class SlackService {
     public Response handleBlockMineConfirm(BlockActionRequest req, ActionContext ctx) throws IOException, SlackApiException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
+
         try {
-            var obj = (JSONObject) parser.parse(action.getValue());
-            var actionValue = new LinkResourceBlockActionJSON(obj);
+            var client = ctx.client();
+            var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
+            var userId = ctx.getRequestUserId();
+            var userInfo = client.usersInfo(r -> r.user(userId));
+            var userProfile = userInfo.getUser().getProfile();
 
-            var response = ActionResponse
-                    .builder()
-                    .deleteOriginal(true)
-                    .replaceOriginal(true)
-                    .text("")
-                    .build();
-
-            ctx.respond(response);
-            ctx.client().chatPostMessage(r -> r
-                    .channel(req.getPayload().getChannel().getId())
-                    .blocks(asBlocks(buildMineActionOutput(actionValue)))
-                    .text(actionValue.text)
-            );
+            if (payload.getChannel().getName().equals("directmessage")) {
+                ctx.respond(r -> r
+                        .responseType("in_channel")
+                        .replaceOriginal(true)
+                        .blocks(asBlocks(
+                                buildMineActionOutput(actionValue),
+                                buildMineActionRider()
+                        ))
+                        .text(actionValue.getCommand().getText())
+                );
+            } else {
+                ctx.respond(REMOVE_MESSAGE_RESPONSE);
+                client.chatPostMessage(r -> r
+                        .channel(payload.getChannel().getId())
+                        .username(userProfile.getDisplayName())
+                        .iconUrl(userProfile.getImageOriginal())
+                        .blocks(asBlocks(
+                                buildMineActionOutput(actionValue),
+                                buildMineActionRider()
+                        ))
+                        .text(actionValue.getCommand().getText())
+                );
+            }
 
             return ctx.ack();
-        } catch (ParseException e) {
+        } catch (SlackApiException e) {
             // TODO: handle me!
-            return ctx.ack();
+            System.out.println(e);
+            throw e;
         }
+
     }
 
     public Response handleBlockBack(BlockActionRequest req, ActionContext ctx) throws IOException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
-        try {
-            var obj = (JSONObject) parser.parse(action.getValue());
-            var actionValue = new LinkResourceBlockActionJSON(obj);
-            actionValue.dropLastId();
-            var id = actionValue.getLastId();
-            var resourceOption = linkService.findById(new ObjectId(id));
+        var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
 
-            if (resourceOption.isPresent()) {
-                var resource = resourceOption.get();
-                var attrs = resource.getAttrs();
-                actionValue.setLink(attrs.getLink());
+        actionValue.dropLastId();
+        var id = actionValue.getLastId();
+        var resourceOption = linkService.findById(new ObjectId(id));
 
-                var response = ActionResponse
-                        .builder()
-                        .replaceOriginal(true)
-                        .blocks(asBlocks(
-                                buildMineActionOutput(actionValue),
-                                actions(actions -> actions.elements(buildMineActionElements(actionValue)))
-                        ))
-                        .text(actionValue.text)
-                        .build();
+        if (resourceOption.isPresent()) {
+            var resource = resourceOption.get();
+            var attrs = resource.getAttrs();
+            actionValue.setType(attrs.getType());
+            actionValue.setLink(attrs.getLink());
 
-                ctx.respond(response);
+            var actionElements = buildMineActionElements(actionValue);
+            var response = ActionResponse
+                    .builder()
+                    .replaceOriginal(true)
+                    .blocks(asBlocks(
+                            buildMineActionOutput(actionValue),
+                            actions(actions -> actions.elements(actionElements))
+                    ))
+                    .text(actionValue.getCommand().getText())
+                    .build();
 
-                return ctx.ack();
-            }
-            ctx.respond(":pick: No images to speak of! Try adding some.");
-            return ctx.ack();
-        } catch (ParseException e) {
-            // TODO: handle me!
+            ctx.respond(response);
+
             return ctx.ack();
         }
+        ctx.respond(":pick: No images to speak of! Try adding some.");
+        return ctx.ack();
     }
 
     public Response handleBlockShuffle(BlockActionRequest req, ActionContext ctx) throws IOException {
         var payload = req.getPayload();
         var action = payload.getActions().get(0);
-        try {
-            var obj = (JSONObject) parser.parse(action.getValue());
-            var actionValue = new LinkResourceBlockActionJSON(obj);
-            var resource = linkService.retrieveOneRandom(actionValue.type, actionValue.tags);
+        var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
+        var command = actionValue.getCommand();
 
-            if (resource != null) {
-                var attrs = resource.getAttrs();
-                actionValue.addId(resource.getId());
-                actionValue.setLink(attrs.getLink());
+        var resource = linkService.retrieveOneRandom(command.getType(), command.getTags());
 
-                var response = ActionResponse
-                        .builder()
-                        .replaceOriginal(true)
-                        .blocks(asBlocks(
-                                buildMineActionOutput(actionValue),
-                                actions(actions -> actions.elements(buildMineActionElements(actionValue)))
-                        ))
-                        .text(actionValue.text)
-                        .build();
+        if (resource != null) {
+            var attrs = resource.getAttrs();
+            actionValue.addId(resource.getId());
+            actionValue.setType(attrs.getType());
+            actionValue.setLink(attrs.getLink());
 
-                ctx.respond(response);
+            var actionElements = buildMineActionElements(actionValue);
+            var response = ActionResponse
+                    .builder()
+                    .replaceOriginal(true)
+                    .blocks(asBlocks(
+                            buildMineActionOutput(actionValue),
+                            actions(actions -> actions.elements(actionElements))
+                    ))
+                    .text(command.getText())
+                    .build();
 
-                return ctx.ack();
-            }
-            ctx.respond(":pick: No images to speak of! Try adding some.");
-            return ctx.ack();
-        } catch (ParseException e) {
-            // TODO: handle me!
+            ctx.respond(response);
+
             return ctx.ack();
         }
+        ctx.respond(":pick: No images to speak of! Try adding some.");
+        return ctx.ack();
     }
 
     public Response handleBlockCancel(BlockActionRequest req, ActionContext ctx) throws IOException {
-        var response = ActionResponse
-                .builder()
-                .deleteOriginal(true)
-                .replaceOriginal(true)
-                .text("")
-                .build();
-
-        ctx.respond(response);
-
+        ctx.respond(REMOVE_MESSAGE_RESPONSE);
         return ctx.ack();
     }
     //endregion
 
-    private LayoutBlock buildMineActionOutput(LinkResourceBlockActionJSON actionValue) {
-        return image((ModelConfigurator<ImageBlock.ImageBlockBuilder>) image -> image.title(plainText(actionValue.text)).imageUrl(actionValue.link).altText(actionValue.text));
+    private LayoutBlock buildMineActionOutput(LinkResourceBlockAction actionValue) {
+        var command = actionValue.getCommand();
+        switch (actionValue.getType()) {
+            // FIXME: make this a flexible value with some defined types
+            case "image":
+                return image((ModelConfigurator<ImageBlock.ImageBlockBuilder>) i -> i
+                        .title(plainText(command.getText()))
+                        .imageUrl(actionValue.getLink())
+                        .altText(command.getText())
+                );
+            default:
+                return section(s -> s.text(markdownText(actionValue.getLink())));
+        }
     }
 
-    private List<BlockElement> buildMineActionElements(LinkResourceBlockActionJSON actionValue) {
-        var actionPayload = actionValue.asJSON().toString();
-        var actionElements = new ArrayList<BlockElement>();
-        actionElements.add(button(b -> b.text(plainText("Confirm")).value(actionPayload).actionId(consts.ACTION_MINE_CONFIRM).style("primary")));
-        actionElements.add(button(b -> b.text(plainText("Shuffle")).value(actionPayload).actionId(consts.ACTION_MINE_SHUFFLE)));
-        actionElements.add(button(b -> b.text(plainText("Cancel")).value(actionPayload).actionId(consts.ACTION_MINE_CANCEL).style("danger")));
+    private LayoutBlock buildMineActionRider() {
+        return context(c -> c.elements(asContextElements(
+                plainText(pt -> pt.text(":pick: Posted with " + constants.COMMAND_MINE_QUERY))
+        )));
+    }
 
-        if (actionValue.ids.length > 1) {
-            actionElements.add(button(b -> b.text(plainText("Back")).value(actionPayload).actionId(consts.ACTION_MINE_BACK)));
+    private List<BlockElement> buildMineActionElements(LinkResourceBlockAction actionValue) throws JsonProcessingException {
+        var actionPayload = mapper.writeValueAsString(actionValue);
+        var actionElements = new ArrayList<BlockElement>();
+        actionElements.add(button(b -> b.text(plainText("Confirm")).value(actionPayload).actionId(constants.ACTION_MINE_CONFIRM).style("primary")));
+        actionElements.add(button(b -> b.text(plainText("Shuffle")).value(actionPayload).actionId(constants.ACTION_MINE_SHUFFLE)));
+        actionElements.add(button(b -> b.text(plainText("Cancel")).value(actionPayload).actionId(constants.ACTION_MINE_CANCEL).style("danger")));
+
+        if (actionValue.getIds().length > 1) {
+            actionElements.add(button(b -> b.text(plainText("Back")).value(actionPayload).actionId(constants.ACTION_MINE_BACK)));
         }
 
         return actionElements;
-    }
-
-    private class LinkResourceBlockActionJSON extends JSONObject {
-        private final String text;
-        private final String type;
-        private final String[] tags;
-        private String link;
-        private String[] ids;
-
-        public LinkResourceBlockActionJSON(String commandText, String type, String[] tags, LinkResource resource) {
-            super();
-            var attrs = resource.getAttrs();
-            ids = new String[]{resource.getId().toString()};
-            link = attrs.getLink();
-            text = commandText;
-            this.type = type;
-            this.tags = tags;
-        }
-
-        public LinkResourceBlockActionJSON(JSONObject obj) {
-            super();
-            ids = obj.get("ids").toString().split(" ");
-            link = obj.get("link").toString();
-            text = obj.get("text").toString();
-            type = obj.get("type") != null ? obj.get("type").toString() : null;
-            tags = obj.get("tags").toString().split(" ");
-        }
-
-        public void addId(ObjectId id) {
-            ids = Arrays.copyOf(ids, ids.length + 1);
-            ids[ids.length - 1] = id.toString();
-        }
-
-        public String dropLastId() {
-            var id = ids[ids.length - 1];
-            ids = Arrays.copyOfRange(ids, 0, ids.length - 1);
-            return id;
-        }
-
-        public void setLink(String link) {
-            this.link = link;
-        }
-
-        public String getLastId() {
-            return ids.length > 0 ? ids[ids.length - 1] : null;
-        }
-
-        public JSONObject asJSON() {
-            var json = new JSONObject();
-            json.put("ids", String.join(" ", ids));
-            json.put("link", link);
-            json.put("text", text);
-            json.put("type", type);
-            json.put("tags", String.join(" ", tags));
-            return json;
-        }
     }
 }

@@ -20,12 +20,12 @@ import java.util.Optional;
 public class LinkService {
     private final MongoTemplate mongoTemplate;
     private final LinkRepository linkRepository;
-    private final ConstantsService consts;
+    private final ConstantsService constants;
 
-    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConstantsService consts) {
+    public LinkService(MongoTemplate mongoTemplate, LinkRepository linkRepository, ConstantsService constants) {
         this.mongoTemplate = mongoTemplate;
         this.linkRepository = linkRepository;
-        this.consts = consts;
+        this.constants = constants;
     }
 
     public LinkResource insert(LinkModel attrs) throws AuthenticationException {
@@ -82,7 +82,7 @@ public class LinkService {
 
         Aggregation aggregation = Aggregation.newAggregation(matchOp, sampleOp);
 
-        var results = mongoTemplate.aggregate(aggregation, consts.LINKS_COLLECTION_NAME, LinkResource.class);
+        var results = mongoTemplate.aggregate(aggregation, constants.LINKS_COLLECTION_NAME, LinkResource.class);
         return results.getMappedResults();
     }
 
@@ -98,7 +98,7 @@ public class LinkService {
             if (existing.getAttrs().getUserId().equals(attrs.getUserId())) {
                 var existingQuery = Query.query(Criteria.where("_id").is(existing.getId()));
                 var existingUpdate = Update.update("attrs", attrs);
-                return mongoTemplate.findAndModify(existingQuery, existingUpdate, LinkResource.class, consts.LINKS_COLLECTION_NAME);
+                return mongoTemplate.findAndModify(existingQuery, existingUpdate, LinkResource.class, constants.LINKS_COLLECTION_NAME);
             }
             throw new AuthenticationException();
         }
