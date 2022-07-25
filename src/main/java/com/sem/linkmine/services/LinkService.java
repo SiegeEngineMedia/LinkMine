@@ -37,12 +37,12 @@ public class LinkService {
     }
 
     public List<CountObject> getCounts() {
-//        Aggregation aggregation = Aggregation.newAggregation(
-//                Aggregation.unwind("$attrs.tags"),
-//                Aggregation.group("$attrs.tags").sum("count")
-//        );
-//        return mongoTemplate.aggregate(aggregation, CountObject.class);
-        return new ArrayList<CountObject>();
+        TypedAggregation<CountObject> aggregation = TypedAggregation.newAggregation(
+                CountObject.class,
+                Aggregation.unwind("$attrs.tags"),
+                Aggregation.group("$attrs.tags").count().as("count")
+        );
+        return mongoTemplate.aggregate(aggregation, constants.LINKS_COLLECTION_NAME, CountObject.class).getMappedResults();
     }
 
     public void deleteById(ObjectId id, String userId) throws AuthenticationException {

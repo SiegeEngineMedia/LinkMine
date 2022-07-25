@@ -149,11 +149,7 @@ public class SlackService {
         var action = payload.getActions().get(0);
 
         try {
-            var client = ctx.client();
             var actionValue = mapper.readValue(action.getValue(), LinkResourceBlockAction.class);
-            var userId = ctx.getRequestUserId();
-            var userInfo = client.usersInfo(r -> r.user(userId));
-            var userProfile = userInfo.getUser().getProfile();
 
             if (payload.getChannel().getName().equals("directmessage")) {
                 ctx.respond(r -> r
@@ -166,6 +162,11 @@ public class SlackService {
                         .text(actionValue.getCommand().getText())
                 );
             } else {
+                var client = ctx.client();
+                var userId = ctx.getRequestUserId();
+                var userInfo = client.usersInfo(r -> r.user(userId));
+                var userProfile = userInfo.getUser().getProfile();
+
                 ctx.respond(REMOVE_MESSAGE_RESPONSE);
                 client.chatPostMessage(r -> r
                         .channel(payload.getChannel().getId())
