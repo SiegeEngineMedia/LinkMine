@@ -20,18 +20,22 @@ dependencies {
     implementation 'com.slack.api:bolt-servlet:1.24.0'
     // implementation 'org.slf4j:slf4j-simple:1.7.36'
     // implementation 'com.google.inject:guice:5.1.0'
-    implementation 'javax.inject:javax.inject:1'
-    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
+    implementation 'junit:junit:4.13.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test:2.7.0'
 }
 
-// application {
-//     mainClassName = "hello.LinkMineApplication"
-// }
-//
-// run {
-//     systemProperty "org.slf4j.simpleLogger.log.com.slack.api", System.getProperty("slackLogLevel")
-// }
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.sem.linkmine.LinkMineApplication'
+        )
+    }
+    duplicatesStrategy "exclude"
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
 
 tasks.named('test') {
     useJUnitPlatform()
