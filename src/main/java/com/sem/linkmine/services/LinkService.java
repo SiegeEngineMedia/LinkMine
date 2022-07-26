@@ -5,6 +5,7 @@ import com.sem.linkmine.models.LinkModel;
 import com.sem.linkmine.models.LinkResource;
 import com.sem.linkmine.repositories.LinkRepository;
 import org.bson.types.ObjectId;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -40,7 +41,8 @@ public class LinkService {
         TypedAggregation<CountObject> aggregation = TypedAggregation.newAggregation(
                 CountObject.class,
                 Aggregation.unwind("$attrs.tags"),
-                Aggregation.group("$attrs.tags").count().as("count")
+                Aggregation.group("$attrs.tags").count().as("count"),
+                Aggregation.sort(Sort.by(Sort.Direction.DESC, "count"))
         );
         return mongoTemplate.aggregate(aggregation, constants.LINKS_COLLECTION_NAME, CountObject.class).getMappedResults();
     }

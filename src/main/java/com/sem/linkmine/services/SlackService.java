@@ -124,17 +124,14 @@ public class SlackService {
     public Response handleMineSum(SlashCommandRequest req, SlashCommandContext ctx) throws IOException, SlackApiException {
         List<CountObject> counts = linkService.getCounts();
         List<ContextBlockElement> textElements = new ArrayList<ContextBlockElement>();
-        int total = 0;
         for (var element : counts) {
-            total += element.count;
-            textElements.add(plainText(element._id + ": " + element.count));
+            textElements.add(plainText(pt -> pt.text(element._id + ": " + element.count)));
         }
-        textElements.add(0, plainText("Total: " + total));
 
         ctx.respond(r -> r
-                .text("Count for each tag:")
+                .text("Counts for each tag:")
                 .blocks(asBlocks(
-                        section(s -> s.text(markdownText("Count for each tag:"))),
+                        section(s -> s.text(markdownText("Counts for each tag:"))),
                         context(c -> c.elements(textElements))
                 ))
         );
